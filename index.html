@@ -1,0 +1,743 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>PouchDB Samples</title>
+
+  <link rel="stylesheet" href="node_modules/bootstrap/dist/css/bootstrap.min.css">
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+  <div class="navbar navbar-dark bg-dark shadow-sm">
+    <div class="container d-flex justify-content-between">
+      <div class="navbar-brand d-flex align-items-center">
+        PouchDB Samples
+      </div>
+    </div>
+  </div>
+
+  <div class="container body-content">
+    <div class="row">
+      <div class="col-12">
+        <h3>Database Operations</h3>
+      </div>
+      <div class="col-xs-12">
+        <div class="btn btn-primary" onclick="addJob();">Add Job</div>
+        <div class="btn btn-primary" onclick="getJob();">Get a Job</div>
+        <div class="btn btn-primary" onclick="updateJob();">Update a Job</div>
+        <div class="btn btn-primary" onclick="deleteJob();">Delete a Job</div>
+        <div class="btn btn-primary" onclick="compactDB();">Compact DB</div>
+        <div class="btn btn-primary" onclick="destroyDatabase();">Destroy DB</div>
+      </div>
+    </div>
+    <br/>
+    <div class="row">
+      <div class="col-12">
+        <h3>Bulk Operations</h3>
+      </div>
+      <div class="col-xs-12">
+        <div class="btn btn-primary" onclick="addMultipleDocs();">Add Multiple Docs</div>
+        <div class="btn btn-primary" onclick="getAllDocIdsAndRevs();">Get All Docs (Id & Revs)</div>
+        <div class="btn btn-primary" onclick="getAllDocuments();">Get All Docs</div>
+        <div class="btn btn-primary" onclick="countDocuments();">Count Docs</div>
+        <div class="btn btn-primary" onclick="getByRange();">Get by Range</div>
+        <div class="btn btn-primary" onclick="getAllJobs();">Get all Jobs</div>
+      </div>
+    </div>
+    <br/>
+    <div class="row">
+      <div class="col-12">
+        <h3>Find Operations</h3>
+      </div>
+      <div class="col-xs-12">
+        <div class="btn btn-primary" onclick="findACustomer();">Find a Customer</div>
+        <div class="btn btn-primary" onclick="showError();">Show Error</div>
+        <div class="btn btn-primary" onclick="showWarning();">Show Warning</div>
+        <div class="btn btn-primary" onclick="greaterThan();">Greater Than</div>
+        <div class="btn btn-primary" onclick="searchTwoFields();">Search Two Fields</div>
+        <div class="btn btn-primary" onclick="findInArray();">Search in Nested Array</div>
+      </div>
+    </div>
+    <br/>
+
+    <div class="row">
+      <div class="col-12">
+        <h3>Map Queries</h3>
+      </div>
+      <div class="col-xs-12">
+        <div class="btn btn-primary" onclick="simpleQuery();">Simple Query</div>
+        <div class="btn btn-primary" onclick="simpleQueryNoValue();"> Simple Query no Value</div>
+        <div class="btn btn-primary" onclick="simpleQueryMultipleFields();"> Simple Query Multiple Fields</div>
+        <div class="btn btn-primary" onclick="simpleQueryWithObject();"> Simple Query With Object</div>
+        <div class="btn btn-primary" onclick="createDesignDoc();"> Create Design Document</div>
+        <div class="btn btn-primary" onclick="getCustomer();"> Get a Customer</div>
+
+      </div>
+    </div>
+    <br/>
+
+    <div class="row">
+      <div class="col-12">
+        <h3>Reduce Functions</h3>
+      </div>
+      <div class="col-xs-12">
+        <div class="btn btn-primary" onclick="countDocumentsReduce();">Count Documents</div>
+        <div class="btn btn-primary" onclick="sumInvoiceTotal();">Sum Invoice Total</div>
+        <div class="btn btn-primary" onclick="sumPrice();">Sum Price</div>
+        <div class="btn btn-primary" onclick="statsPrice();">Status Price</div>
+        <div class="btn btn-primary" onclick="avgPrice();">Average Price</div>
+      </div>
+    </div>
+    <br/>
+
+    <div class="row">
+      <div class="col-xs-12">
+        <div id="messageArea" class="alert alert-danger d-none">
+          <span id="message"></span>
+        </div>
+      </div>
+    </div>
+    <br/>
+    <div class="row">
+      <div class="col-xs-12">
+        <div id="jsonArea" class="alert alert-primary d-none">
+          <textarea name="" id="json" cols="100" rows="30"></textarea>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="node_modules/pouchdb/dist/pouchdb.min.js"></script>
+  <script src="node_modules/pouchdb/dist/pouchdb.find.min.js"></script>
+  <script src="node_modules/jquery/dist/jquery.min.js"></script>
+  <script src="scripts/common.js"></script>
+  <script>
+    let db = null;
+
+    db = new PouchDB("jobs");
+
+    PouchDB.on("created", function (dbname) {
+      common.displayMessage("Database: " + dbname + "' opened sucessfully")
+    });
+
+    db.on('error', function (err) {
+      console.log(err);
+    })
+
+    function sumInvoiceTotal() {
+      common.hideMessageAreas();
+      db.query({
+        map: function (doc) {
+          if (doc.invoiceTotal) {
+            emit(null, doc.invoiceTotal);
+          }
+        },
+        reduce: '_sum'
+      }).then(function (response) {
+        common.displayJSON(response);
+      }).catch(function (err) {
+        common.displayMessage(err);
+      });
+    }
+
+    function sumPrice() {
+      common.hideMessageAreas();
+      db.query({
+        map: function (doc) {
+          if (doc.workDone) {
+            for (var i = 0; i < doc.workDone.length; i++) {
+              if (!isNaN(doc.workDone[i].price)) {
+                emit(null, doc.workDone[i].price);
+              }
+            }
+          }
+        },
+        reduce: '_sum'
+      }).then(function (response) {
+        common.displayJSON(response);
+      }).catch(function (err) {
+        common.displayMessage(err);
+      })
+    }
+
+    function statsPrice() {
+      common.hideMessageAreas();
+      db.query({
+        map: function (doc) {
+          if (doc.workDone) {
+            for (var i = 0; i < doc.workDone.length; i++) {
+              if (!isNaN(doc.workDone[i].price)) {
+                emit(null, doc.workDone[i].price);
+              }
+            }
+          }
+        },
+        reduce: '_stats'
+      }).then(function (response) {
+        common.displayJSON(response);
+      }).catch(function (err) {
+        common.displayMessage(err);
+      });
+    }
+
+    function avgPrice() {
+      common.hideMessageAreas();
+      db.query({
+        map: function (doc) {
+          if (doc.workDone) {
+            for (var i = 0; i < doc.workDone.length; i++) {
+              if (!isNaN(doc.workDone[i].price)) {
+                emit(null, [doc.workDone[i].price]);
+              }
+            }
+          }
+        },
+        reduce: '_stats'
+      }).then(function (response) {
+        var avg = response.rows[0].value.sum / response.rows[0].value.count;
+        common.displayMessage('The average is ' + avg);
+      }).catch(function (err) {
+        common.displayMessage(err);
+      })
+    }
+
+
+    function getCustomer() {
+      let start = 'John Smith';
+      let end = 'John Smith\ufff0';
+
+      common.hideMessageAreas();
+      db.query("allQueries/byCustomerName", {
+        startkey: start,
+        endkey: end,
+        include_docs: true
+      }).then(function (response) {
+        common.displayJSON(response);
+      }).catch(function (err) {
+        common.displayMessage(err);
+      })
+    }
+
+    function createDesignDoc() {
+      common.hideMessageAreas();
+
+      db.get("_design/allQueries")
+        .then(function (doc) {
+          common.displayMessage("Design document: '" + doc._id + "' already exists");
+        }).catch(function (err) {
+          if (err.status == 404) {
+            var ddoc = {
+              _id: '_design/allQueries',
+              views: {
+                byCustomerName: {
+                  map: function (doc) {
+                    if (doc.customer.name) {
+                      emit(doc.customer.name);
+                    }
+                  }.toString()
+                },
+                byPrice: {
+                  map: function (doc) {
+                    if (doc.lineItems) {
+                      for (var i = 0; i < doc.lineItems.length; i++) {
+                        emit(doc.lineItems[i].price);
+                      }
+                    }
+                  }.toString()
+                }
+              }
+            };
+
+            // Save the design document
+            db.put(ddoc).then(function (response) {
+              common.displayMessage("Design document created successfully.");
+              common.displayJSON(response);
+            }).catch(function (err) {
+              common.displayMessage(err);
+            });
+          } else {
+            common.displayMessage(err);
+          }
+        })
+    }
+
+    function simpleQueryWithObject() {
+      common.hideMessageAreas();
+      db.query(function (doc) {
+        if (doc.serviceDate) {
+          emit(doc._id, {
+            "serviceDate": doc.serviceDate,
+            "technician": doc.technician
+          });
+        }
+      }).then(function (response) {
+        common.displayJSON(response);
+      }).catch(function (err) {
+        common.displayMessage(err);
+      })
+    }
+
+    function simpleQueryMultipleFields() {
+      common.hideMessageAreas();
+      db.query(function (doc) {
+        if (doc.serviceDate) {
+          emit(doc._id, [doc.serviceDate, doc.technician]);
+        }
+      }).then(function (response) {
+        common.displayJSON(response);
+      }).catch(function (err) {
+        common.displayMessage(err);
+      })
+    }
+
+    function simpleQueryNoValue() {
+      common.hideMessageAreas();
+      db.query(function (doc) {
+        if (doc.serviceDate) {
+          emit(doc.serviceDate);
+        }
+      }).then(function (response) {
+        common.displayJSON(response);
+      }).catch(function (err) {
+        common.displayMessage(err);
+      })
+    }
+
+    function simpleQuery() {
+      common.hideMessageAreas();
+
+      db.query(function (doc) {
+        if (doc.serviceDate) {
+          emit(doc._id, doc.serviceDate);
+        }
+      }).then(function (response) {
+        common.displayJSON(response);
+      }).catch(function (err) {
+        common.displayMessage(err);
+      })
+    }
+
+    function findInArray() {
+      let search = 150;
+
+      common.hideMessageAreas();
+      db.find({
+        selector: {
+          "workDone": {
+            "$elemMatch": {
+              "price": {
+                $gt: search
+              }
+            }
+          }
+        }
+      }).then(function (response) {
+        common.displayJSON(response);
+      }).catch(function (err) {
+        common.displayMessage(err);
+      });
+    }
+
+    function searchTwoFields() {
+      common.hideMessageAreas();
+      db.createIndex({
+        index: {
+          fields: ['customer', 'techncian.name']
+        }
+      }).then(function (response) {
+        return db.find({
+          selector: {
+            customer: '834',
+            'technician.name': 'Sheriff, Paul'
+          }
+        });
+      }).then(function (response) {
+        common.displayJSON(response);
+      }).catch(function (err) {
+        common.displayMessage(err);
+      })
+    }
+
+    function greaterThan() {
+      let search = 200;
+
+      common.hideMessageAreas();
+
+      db.find({
+        selector: {
+          invoiceTotal: {
+            $gt: search
+          }
+        },
+        sort: ['invoiceTotal']
+      }).then(function (response) {
+        common.displayJSON(response);
+      }).catch(function (err) {
+        common.displayMessage(err);
+      })
+    }
+
+    function showWarning() {
+      common.hideMessageAreas();
+
+      db.find({
+        selector: {
+          invoiceDate: '2018-02-04'
+        },
+        fields: ['_id', 'invoiceDate', 'invoiceTotal', 'customer']
+      }).then(function (response) {
+        common.displayJSON(response);
+      }).catch(function (err) {
+        common.displayMessage(err);
+      });
+    }
+
+    function showError() {
+      common.hideMessageAreas();
+
+      db.find({
+        selector: {
+          invoiceDate: '2018-03-06'
+        },
+        sort: ['invoiceDate']
+      }).then(function (response) {
+        common.displayJSON(response);
+      }).catch(function (err) {
+        common.displayMessage(err);
+      })
+    }
+
+    function findACustomer() {
+      let search = 'John Smith';
+
+      common.hideMessageAreas();
+      db.find({
+        selector: {
+          "customer.name": search
+        },
+        sort: ['customer.name']
+      }).then(function (response) {
+        common.displayJSON(response);
+      }).catch(function (err) {
+        common.displayMessage(err);
+      });
+    }
+
+    function createIndexes() {
+      // create index on invoice total
+      db.createIndex({
+        index: {
+          fields: ['invoiceTotal']
+        }
+      }).then(function (response) {
+        common.displayJSON(response);
+      }).catch(function (err) {
+        common.displayMessage(err);
+      });
+
+      // create index on customer name
+      db.createIndex({
+        index: {
+          fields: ['customer.name']
+        }
+      }).then(function (response) {
+        common.displayJSON(response);
+      }).catch(function (err) {
+        common.displayMessage(err);
+      });
+    }
+
+    function addJob() {
+      common.hideMessageAreas();
+
+      db.put({
+        "_id": 'job_001',
+        "serviceDate": '2018-02-03',
+        "customer": "834",
+        "technician": {
+          "EmployeeID": '1023',
+          "name": 'Sheriff, Paul'
+        },
+        "workDone": [{
+          "description": "Driveway repair",
+          "price": 225
+        }]
+      }).then(function (response) {
+        common.displayJSON(response);
+        common.displayMessage("Job added.");
+      }).catch(function (err) {
+        common.displayMessage(err);
+      });
+    }
+
+    function getJob() {
+      common.hideMessageAreas();
+      db.get("job_2011")
+        .then(function (response) {
+          common.displayJSON(response);
+        }).catch(function (err) {
+          common.displayMessage(err);
+        })
+    }
+
+    function updateJob() {
+      common.hideMessageAreas();
+      db.get('job_001')
+        .then(function (doc) {
+          doc.serviceDate = '2018-02-02';
+          doc.technician.name = 'Sheriff, Paul2';
+          return db.put(doc);
+        }).then(function (response) {
+          common.displayJSON(response);
+          common.displayMessage("Job updated.");
+        }).catch(function (err) {
+          common.displayMessage(err);
+        });
+    }
+
+    function deleteJob() {
+      common.hideMessageAreas();
+
+      db.get("job_001")
+        .then(function (doc) {
+          return db.remove(doc);
+        }).then(function (response) {
+          common.displayJSON(response);
+          common.displayJSON("Job deleted.");
+        }).catch(function (err) {
+          common.displayMessage(err);
+        });
+    }
+
+    function compactDB() {
+      common.hideMessageAreas();
+      if (db) {
+        db.compact().then(function (response) {
+          common.displayJSON(response);
+          common.displayMessage("Database compacted");
+        }).catch(function (err) {
+          common.displayMessage(err);
+        });
+      } else {
+        common.displayMessage("Please open the databse first.");
+      }
+    }
+
+    function destroyDatabase() {
+      common.hideMessageAreas();
+      if (db) {
+        db.destroy().then(function (response) {
+          common.displayJSON(response);
+          common.displayMessage("Database deleted.");
+        }).catch(function (err) {
+          common.displayMessage(err);
+        });
+      } else {
+        common.displayMessage("Please open the database first.");
+      }
+    }
+
+    function addMultipleDocs() {
+      common.hideMessageAreas();
+      db.bulkDocs([{
+        "_id": "job_2010",
+        "serviceDate": "2018-02-03",
+        "customer": "834",
+        "technician": {
+          "EmployeeID": '1023',
+          "name": "Sheriff, Paul"
+        },
+        "workDone": [{
+          "description": "Driveway repair",
+          "price": 150
+        }]
+      }, {
+        "_id": "job_2011",
+        "serviceDate": "2018-02-03",
+        "customer": "834",
+        "technician": {
+          "EmployeeID": '1023',
+          "name": "Sheriff, Paul"
+        },
+        "workDone": [{
+          "description": "Carport repair",
+          "price": 150
+        }]
+      }, {
+        "_id": "job_2020",
+        "serviceDate": "2018-02-03",
+        "customer": "452",
+        "technician": {
+          "EmployeeID": '1034',
+          "name": "Sheriff, Madison"
+        },
+        "workDone": [{
+          "description": "Drywall installation",
+          "price": 500
+        }, {
+          "description": "Paiting",
+          "price": 100
+        }]
+      }, {
+        "_id": "job_2030",
+        "serviceDate": "2018-02-03",
+        "customer": "651",
+        "technician": {
+          "EmployeeID": '1051',
+          "name": "Jones, Bruce"
+        },
+        "workDone": [{
+          "description": "Lawn mowing",
+          "price": 100
+        }]
+      }, {
+        "_id": "invoice_2534",
+        "invoiceDate": "2018-02-04",
+        "invoiceTotal": 375,
+        "customer": {
+          "_id": "834",
+          "name": "John Smith",
+          "address": "123 Main Street",
+          "city": "Nashville",
+          "state": "TN",
+          "postalCode": "37211"
+        },
+        "lineItems": [{
+            "jobId": "job_2010",
+            "description": "Driveway repair",
+            "price": 225
+          },
+          {
+            "jobId": "job_2011",
+            "description": "Carport repair",
+            "price": 150
+          }
+        ]
+      }, {
+        "_id": "invoice_2536",
+        "invoiceDate": "2018-02-04",
+        "invoiceTotal": 600,
+        "customer": {
+          "_id": "452",
+          "name": "Henry James",
+          "address": "98 5th Ave",
+          "city": "Brentwood",
+          "state": "TN",
+          "postalCode": "37027"
+        },
+        "lineItems": [{
+            "jobId": "job_2020",
+            "description": "Drywall installation",
+            "price": 500
+          },
+          {
+            "jobId": "job_2020",
+            "description": "Painting",
+            "price": 100
+          }
+        ]
+      }]).then(function (response) {
+        common.displayJSON(response);
+        common.displayMessage("Multiple documents added.");
+      }).catch(function (err) {
+        common.displayMessage(err);
+      })
+    }
+
+    function getAllDocIdsAndRevs() {
+      common.hideMessageAreas();
+      db.allDocs().then(function (response) {
+        common.displayJSON(response);
+      }).catch(function (err) {
+        common.displayMessage(err);
+      });
+    }
+
+    function getAllDocuments() {
+      common.hideMessageAreas();
+
+      db.allDocs({
+        include_docs: true
+      }).then(function (response) {
+        common.displayJSON(response);
+      }).catch(function (err) {
+        common.displayMessage(err);
+      });
+    }
+
+    function countDocumentsReduce() {
+      common.hideMessageAreas();
+      db.query({
+        map: function (doc) {
+          emit(doc._id);
+        },
+        reduce: '_count'
+      }).then(function (response) {
+        common.displayJSON(response);
+      }).then(function (err) {
+        common.displayMessage(err);
+      })
+    }
+
+    function countDocuments() {
+      common.hideMessageAreas();
+
+      db.allDocs({
+        limit: 0,
+        include_docs: false
+      }).then(function (response) {
+        common.displayJSON(response);
+      }).catch(function (err) {
+        common.displayMessage(err);
+      })
+    }
+
+    function getByRange() {
+      common.hideMessageAreas();
+      let options = {
+        include_docs: true,
+        startkey: 'job_2010',
+        endkey: 'job_2030'
+      }
+
+      db.allDocs(options).then(function (response) {
+        common.displayJSON(response);
+      }).catch(function (err) {
+        common.displayMessage(err);
+      })
+    }
+
+    function getAllJobs() {
+      common.hideMessageAreas();
+      db.allDocs({
+        startkey: 'job_',
+        endkey: 'job_\ufff0',
+        include_docs: true
+      }).then(function (response) {
+        common.displayJSON(response);
+      }).catch(function (err) {
+        common.displayMessage(err);
+      });
+    }
+
+    function sample1() {
+      // Hide message area
+      common.hideMessageAreas();
+
+      // Create the sample
+
+      // Display messages
+      common.displayMessage("Sample Done.");
+      // Display JSON
+      common.displayJSON({
+        sample: 'Done'
+      });
+    }
+  </script>
+</body>
+
+</html>
